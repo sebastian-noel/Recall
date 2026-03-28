@@ -1,5 +1,5 @@
 /*
- * Recall — ESP32-S3 MJPEG Camera Stream
+ * Second Mind — ESP32-S3 MJPEG Camera Stream
  *
  * Streams MJPEG video over WiFi for the laptop pipeline to consume.
  * Endpoints:
@@ -15,12 +15,13 @@
 // ========================
 // WiFi Config — UPDATE THESE
 // ========================
-const char* ssid     = "YOUR_WIFI_SSID";
-const char* password = "YOUR_WIFI_PASSWORD";
+const char* ssid     = "Stev";
+const char* password = "Sismyname";
 
 // ========================
-// Camera Pins (Freenove ESP32-S3 WROOM CAM)
+// Camera Pins (AI Thinker)
 // ========================
+// Freenove ESP32-S3 WROOM CAM pinout
 #define PWDN_GPIO    -1
 #define RESET_GPIO   -1
 #define XCLK_GPIO     15
@@ -42,12 +43,12 @@ const char* password = "YOUR_WIFI_PASSWORD";
 // ========================
 // Stream Settings
 // ========================
-#define FRAME_SIZE    FRAMESIZE_VGA   // 640x480
+#define FRAME_SIZE    FRAMESIZE_VGA   // 640x480 — good balance of quality and speed
 #define JPEG_QUALITY  12              // 0-63, lower = better quality
 #define XCLK_FREQ     20000000       // 20MHz camera clock
 
-const char* STREAM_BOUNDARY = "recallframe";
-const char* STREAM_CONTENT_TYPE = "multipart/x-mixed-replace;boundary=recallframe";
+const char* STREAM_BOUNDARY = "secondmindframe";
+const char* STREAM_CONTENT_TYPE = "multipart/x-mixed-replace;boundary=secondmindframe";
 
 WebServer server(80);
 
@@ -79,10 +80,10 @@ bool init_camera() {
   config.pin_reset    = RESET_GPIO;
   config.xclk_freq_hz = XCLK_FREQ;
   config.pixel_format = PIXFORMAT_JPEG;
-  config.grab_mode    = CAMERA_GRAB_LATEST;
+  config.grab_mode    = CAMERA_GRAB_LATEST;  // always grab newest frame
   config.fb_location  = CAMERA_FB_IN_PSRAM;
   config.jpeg_quality = JPEG_QUALITY;
-  config.fb_count     = 2;
+  config.fb_count     = 2;  // double buffer for smooth streaming
 
   // Use PSRAM if available for higher resolution
   if (psramFound()) {
@@ -105,19 +106,19 @@ bool init_camera() {
   // Tune sensor settings for indoor/wearable use
   sensor_t* s = esp_camera_sensor_get();
   if (s) {
-    s->set_brightness(s, 1);
-    s->set_contrast(s, 1);
+    s->set_brightness(s, 1);    // slight brightness boost
+    s->set_contrast(s, 1);      // slight contrast boost
     s->set_saturation(s, 0);
-    s->set_whitebal(s, 1);
+    s->set_whitebal(s, 1);      // auto white balance on
     s->set_awb_gain(s, 1);
-    s->set_wb_mode(s, 0);
-    s->set_exposure_ctrl(s, 1);
-    s->set_aec2(s, 1);
-    s->set_gain_ctrl(s, 1);
+    s->set_wb_mode(s, 0);       // auto WB mode
+    s->set_exposure_ctrl(s, 1); // auto exposure on
+    s->set_aec2(s, 1);          // auto exposure DSP
+    s->set_gain_ctrl(s, 1);     // auto gain on
     s->set_agc_gain(s, 0);
     s->set_gainceiling(s, (gainceiling_t)6);
-    s->set_bpc(s, 1);
-    s->set_wpc(s, 1);
+    s->set_bpc(s, 1);           // black pixel correction
+    s->set_wpc(s, 1);           // white pixel correction
     s->set_hmirror(s, 0);
     s->set_vflip(s, 0);
   }
@@ -160,7 +161,7 @@ void handle_stream() {
       size_t to_send = min(CHUNK, fb->len - sent);
       size_t written = client.write(fb->buf + sent, to_send);
       if (written == 0) {
-        break;
+        break;  // client disconnected
       }
       sent += written;
     }
@@ -223,11 +224,11 @@ void handle_status() {
 // Root Handler
 // ========================
 void handle_root() {
-  String html = "<!DOCTYPE html><html><head><title>Recall Camera</title></head><body>";
-  html += "<h2>Recall Camera Stream</h2>";
+  String html = "<!DOCTYPE html><html><head><title>Second Mind Camera</title></head><body>";
+  html += "<h2>Second Mind Camera Stream</h2>";
   html += "<img src='/stream' style='max-width:100%;'><br><br>";
   html += "<a href='/frame'>Single Frame</a> | ";
-  html += "<a href='/status'>Status JSON</a>";
+  html += "<a href='/status'>Status JSON</a> | ";
   html += "<p>Stream URL: http://" + WiFi.localIP().toString() + "/stream</p>";
   html += "</body></html>";
   server.send(200, "text/html", html);
@@ -238,13 +239,15 @@ void handle_root() {
 // ========================
 void setup() {
   Serial.begin(115200);
-  Serial.println("\n\n=== Recall Camera ===");
+  Serial.println("\n\n=== Second Mind Camera ===");
 
+  // Init camera
   if (!init_camera()) {
     Serial.println("FATAL: Camera init failed. Check wiring and pin config.");
-    while (1) delay(1000);
+    while (1) delay(1000);  // halt
   }
 
+  // Connect to WiFi
   WiFi.mode(WIFI_STA);
   WiFi.setSleep(false);  // disable WiFi power saving for stable streaming
   WiFi.begin(ssid, password);
@@ -265,6 +268,7 @@ void setup() {
   Serial.print("IP Address: ");
   Serial.println(WiFi.localIP());
 
+  // Register endpoints
   server.on("/", handle_root);
   server.on("/stream", HTTP_GET, handle_stream);
   server.on("/frame", HTTP_GET, handle_frame);
@@ -276,7 +280,7 @@ void setup() {
   Serial.printf("  http://%s/stream  — MJPEG stream\n", WiFi.localIP().toString().c_str());
   Serial.printf("  http://%s/frame   — single JPEG\n", WiFi.localIP().toString().c_str());
   Serial.printf("  http://%s/status  — health check\n", WiFi.localIP().toString().c_str());
-  Serial.println("\nReady for Recall pipeline.");
+  Serial.println("\nReady for Second Mind pipeline.");
 }
 
 // ========================
