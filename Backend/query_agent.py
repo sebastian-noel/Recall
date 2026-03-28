@@ -1,0 +1,62 @@
+import time
+import google.generativeai as genai
+from config import GEMINI_API_KEY
+from memory_logger import MemoryLogger
+
+genai.configure(api_key=GEMINI_API_KEY)
+
+
+class QueryAgent:
+    def __init__(self, memory_logger: MemoryLogger, voice_output=None):
+        self.memory_logger = memory_logger
+        self.voice_output = voice_output
+        self.model = genai.GenerativeModel("gemini-1.5-flash")
+
+    def answer(self, question: str) -> str:
+        """Answer a user's question using the memory log."""
+        memories = self.memory_logger.get_recent_memories()
+
+        if not memories:
+            reply = "I don't have any memories recorded yet. Give me a few minutes to start logging what I see."
+            self._speak(reply)
+            return reply
+
+        prompt = self._build_prompt(question, memories)
+
+        try:
+            response = self.model.generate_content(prompt)
+            answer = response.text.strip()
+            print(f"[QueryAgent] Q: {question} → A: {answer[:80]}...")
+            self._speak(answer)
+            return answer
+        except Exception as e:
+            print(f"[QueryAgent] Error: {e}")
+            reply = "I'm having trouble thinking right now. Please try again in a moment."
+            self._speak(reply)
+            return reply
+
+    def _build_prompt(self, question, memories):
+        lines = [
+            "You are Recall, a kind and helpful memory assistant for someone who may have cognitive impairment.",
+            "You have access to a log of what the user has seen and done recently.",
+            "Answer their question using ONLY the information in the memory log below.",
+            "Be specific about locations and times. Keep your answer to 2-3 sentences.",
+            "If you're not sure, say so honestly — don't make things up.",
+            "",
+            "=== MEMORY LOG ===",
+        ]
+
+        for m in memories:
+            t = time.strftime("%I:%M %p", time.localtime(m["timestamp"]))
+            lines.append(f"[{t}] {m['summary']}")
+            if m.get("objects"):
+                lines.append(f"  Objects: {m['objects']}")
+            if m.get("transcript"):
+                lines.append(f"  Speech: \"{m['transcript']}\"")
+
+        lines.append(f"\n=== QUESTION ===\n{question}")
+        return "\n".join(lines)
+
+    def _speak(self, text):
+        if self.voice_output:
+            self.voice_output.speak(text)

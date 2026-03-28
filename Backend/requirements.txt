@@ -1,0 +1,8 @@
+opencv-python
+ultralytics
+google-generativeai
+elevenlabs
+flask
+flask-cors
+numpy
+Pillow

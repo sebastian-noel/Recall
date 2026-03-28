@@ -1,0 +1,24 @@
+# API keys and secrets
+Backend/config.py
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+venv/
+.env
+
+# SQLite
+*.db
+
+# YOLO model weights
+*.pt
+
+# Node
+Frontend/node_modules/
+Frontend/.next/
+Frontend/out/
+
+# OS
+.DS_Store
+Thumbs.db
