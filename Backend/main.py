@@ -79,8 +79,9 @@ def main():
     signal.signal(signal.SIGINT, shutdown)
     signal.signal(signal.SIGTERM, shutdown)
 
-    # Keep main thread alive
-    signal.pause()
+    # Keep main thread alive (signal.pause() is Unix-only)
+    while True:
+        time.sleep(1)
 
 
 if __name__ == "__main__":
