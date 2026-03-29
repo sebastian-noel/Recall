@@ -17,6 +17,16 @@ class YOLOTagger:
                 names.add(self.model.names[cls_id])
         return sorted(names)
 
+    def count_frame(self, frame):
+        """Run YOLO on a single frame, return counted object strings like '2 person'."""
+        results = self.model(frame, conf=YOLO_CONFIDENCE, verbose=False)
+        counts = {}
+        for r in results:
+            for box in r.boxes:
+                name = self.model.names[int(box.cls[0])]
+                counts[name] = counts.get(name, 0) + 1
+        return [f"{count} {name}" for name, count in sorted(counts.items())]
+
     def tag_batch(self, frames):
         """Tag all frames in a batch using a single inference pass.
 
@@ -24,16 +34,20 @@ class YOLOTagger:
             frames: list of {"frame": np.array, "timestamp": float}
 
         Returns:
-            list of {"frame": np.array, "timestamp": float, "tags": list[str]}
+            list of {"frame": np.array, "timestamp": float, "tags": list[str], "counts": list[str]}
         """
         images = [item["frame"] for item in frames]
         results = self.model(images, conf=YOLO_CONFIDENCE, verbose=False)
         tagged = []
         for item, r in zip(frames, results):
-            tags = sorted({self.model.names[int(box.cls[0])] for box in r.boxes})
+            counts = {}
+            for box in r.boxes:
+                name = self.model.names[int(box.cls[0])]
+                counts[name] = counts.get(name, 0) + 1
             tagged.append({
                 "frame": item["frame"],
                 "timestamp": item["timestamp"],
-                "tags": tags,
+                "tags": sorted(counts.keys()),
+                "counts": [f"{c} {n}" for n, c in sorted(counts.items())],
             })
         return tagged

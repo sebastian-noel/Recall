@@ -8,12 +8,17 @@ from video_capture import VideoCapture
 from audio_capture import AudioCapture
 from transcriber import Transcriber
 from yolo_tagger import YOLOTagger
-from gemini_selector import GeminiSelector
 from memory_logger import MemoryLogger
 from query_agent import QueryAgent
-from alert_agent import AlertAgent
 from voice_output import VoiceOutput
 import api_server
+
+
+def select_best_frames(tagged_frames, n=3):
+    """Pick the N frames with the most detected objects (no API call)."""
+    scored = [(i, len(f["tags"])) for i, f in enumerate(tagged_frames)]
+    scored.sort(key=lambda x: x[1], reverse=True)
+    return [i for i, _ in scored[:n]]
 
 
 def main():
@@ -26,15 +31,13 @@ def main():
     memory_logger = MemoryLogger()
     transcriber = Transcriber()
     yolo_tagger = YOLOTagger()
-    gemini_selector = GeminiSelector()
     query_agent = QueryAgent(memory_logger, voice_output)
-    alert_agent = AlertAgent(memory_logger, voice_output)
 
-    # Pipeline callback: video batch → YOLO tag → Gemini select → memory log
+    # Pipeline callback: video batch → YOLO tag → select top frames → memory log
     def on_video_batch(batch):
         transcript = transcriber.get_recent_transcript(seconds=60)
         tagged = yolo_tagger.tag_batch(batch)
-        selected = gemini_selector.select_frames(tagged, transcript)
+        selected = select_best_frames(tagged, n=3)
         memory_logger.log_selected_frames(tagged, selected, transcript)
         memory_logger.prune_old_memories()
 
@@ -56,9 +59,6 @@ def main():
     print("[Main] Starting audio capture...")
     audio_capture.start()
 
-    print("[Main] Starting alert agent...")
-    alert_agent.start()
-
     print(f"[Main] Starting API server on port {API_PORT}...")
     server_thread = threading.Thread(
         target=api_server.run_server,
@@ -74,13 +74,12 @@ def main():
         print("\n[Main] Shutting down...")
         video_capture.stop()
         audio_capture.stop()
-        alert_agent.stop()
         sys.exit(0)
 
     signal.signal(signal.SIGINT, shutdown)
     signal.signal(signal.SIGTERM, shutdown)
 
-    # Keep main thread alive (signal.pause() is Unix-only)
+    # Keep main thread alive
     while True:
         time.sleep(1)
 

@@ -2,6 +2,7 @@ opencv-python
 ultralytics
 google-genai
 elevenlabs
+chromadb
 flask
 flask-cors
 numpy

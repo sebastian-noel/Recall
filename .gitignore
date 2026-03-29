@@ -11,6 +11,9 @@ venv/
 # SQLite
 *.db
 
+# ChromaDB
+chroma_db/
+
 # YOLO model weights
 *.pt
 

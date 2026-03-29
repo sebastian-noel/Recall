@@ -13,15 +13,19 @@ class QueryAgent:
         self.voice_output = voice_output
 
     def answer(self, question: str) -> str:
-        """Answer a user's question using the memory log."""
-        memories = self.memory_logger.get_recent_memories()
+        """Answer a user's question using semantic search over the memory log."""
+        # Semantic search for the most relevant memories
+        relevant = self.memory_logger.search_memories(question, n_results=15)
 
-        if not memories:
+        # Also get recent memories for time context
+        recent = self.memory_logger.get_recent_memories(hours=1)
+
+        if not relevant and not recent:
             reply = "I don't have any memories recorded yet. Give me a few minutes to start logging what I see."
             self._speak(reply)
             return reply
 
-        prompt = self._build_prompt(question, memories)
+        prompt = self._build_prompt(question, relevant, recent)
 
         try:
             response = client.models.generate_content(model=MODEL, contents=prompt)
@@ -35,24 +39,34 @@ class QueryAgent:
             self._speak(reply)
             return reply
 
-    def _build_prompt(self, question, memories):
+    def _build_prompt(self, question, relevant, recent):
         lines = [
             "You are Recall, a kind and helpful memory assistant for someone who may have cognitive impairment.",
             "You have access to a log of what the user has seen and done recently.",
-            "Answer their question using ONLY the information in the memory log below.",
+            "Answer their question using ONLY the information in the memories below.",
             "Be specific about locations and times. Keep your answer to 2-3 sentences.",
             "If you're not sure, say so honestly — don't make things up.",
-            "",
-            "=== MEMORY LOG ===",
         ]
 
-        for m in memories:
-            t = time.strftime("%I:%M %p", time.localtime(m["timestamp"]))
-            lines.append(f"[{t}] {m['summary']}")
-            if m.get("objects"):
-                lines.append(f"  Objects: {m['objects']}")
-            if m.get("transcript"):
-                lines.append(f"  Speech: \"{m['transcript']}\"")
+        if relevant:
+            lines.append("\n=== MOST RELEVANT MEMORIES ===")
+            for m in relevant:
+                lines.append(f"[{m['time_str']}] {m['summary']}")
+                if m.get("objects"):
+                    lines.append(f"  Objects: {m['objects']}")
+
+        if recent:
+            lines.append("\n=== RECENT MEMORIES (last hour) ===")
+            seen = {m["summary"] for m in relevant} if relevant else set()
+            for m in recent[:10]:
+                if m["summary"] in seen:
+                    continue
+                t = time.strftime("%I:%M %p", time.localtime(m["timestamp"]))
+                lines.append(f"[{t}] {m['summary']}")
+                if m.get("objects"):
+                    lines.append(f"  Objects: {m['objects']}")
+                if m.get("transcript"):
+                    lines.append(f"  Speech: \"{m['transcript']}\"")
 
         lines.append(f"\n=== QUESTION ===\n{question}")
         return "\n".join(lines)

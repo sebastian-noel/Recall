@@ -1,12 +1,10 @@
 import cv2
-import io
 import time
 import sqlite3
 import threading
 from google import genai
 from google.genai import types
-from PIL import Image
-import numpy as np
+import chromadb
 from config import GEMINI_API_KEY, DB_PATH, MEMORY_RETENTION_HOURS
 
 client = genai.Client(api_key=GEMINI_API_KEY)
@@ -17,6 +15,7 @@ class MemoryLogger:
     def __init__(self):
         self._lock = threading.Lock()
         self._init_db()
+        self._init_chroma()
 
     def _init_db(self):
         with self._lock:
@@ -35,10 +34,17 @@ class MemoryLogger:
             conn.commit()
             conn.close()
 
+    def _init_chroma(self):
+        self._chroma_client = chromadb.PersistentClient(path="./chroma_db")
+        self._collection = self._chroma_client.get_or_create_collection(
+            name="memories",
+            metadata={"hnsw:space": "cosine"},
+        )
+        print("[MemoryLogger] ChromaDB initialized")
+
     def log_frame(self, frame, timestamp, tags, transcript=""):
-        """Send frame to Gemini Vision for description, store in SQLite."""
+        """Send frame to Gemini Vision for description, store in SQLite + ChromaDB."""
         try:
-            # Convert OpenCV BGR to JPEG bytes
             _, jpeg_buf = cv2.imencode(".jpg", frame)
             image_bytes = jpeg_buf.tobytes()
 
@@ -60,7 +66,8 @@ class MemoryLogger:
 
             time.sleep(0.5)  # Rate limiting
 
-            self._insert_memory(timestamp, summary, tags, transcript)
+            memory_id = self._insert_memory(timestamp, summary, tags, transcript)
+            self._insert_chroma(memory_id, timestamp, summary, tags, transcript)
             print(f"[MemoryLogger] Logged: {summary[:80]}...")
             return summary
 
@@ -84,15 +91,58 @@ class MemoryLogger:
         objects_str = ", ".join(tags) if tags else None
         with self._lock:
             conn = sqlite3.connect(DB_PATH)
-            conn.execute(
+            cursor = conn.execute(
                 "INSERT INTO memories (timestamp, summary, objects, transcript) VALUES (?, ?, ?, ?)",
                 (timestamp, summary, objects_str, transcript or None)
             )
+            memory_id = cursor.lastrowid
             conn.commit()
             conn.close()
+        return memory_id
+
+    def _insert_chroma(self, memory_id, timestamp, summary, tags, transcript):
+        """Store memory embedding in ChromaDB for semantic search."""
+        objects_str = ", ".join(tags) if tags else ""
+        # Combine summary + objects + transcript for richer embeddings
+        document = summary
+        if objects_str:
+            document += f" Objects: {objects_str}."
+        if transcript:
+            document += f" Speech: {transcript}"
+
+        t = time.strftime("%I:%M %p", time.localtime(timestamp))
+
+        self._collection.add(
+            ids=[str(memory_id)],
+            documents=[document],
+            metadatas=[{
+                "timestamp": timestamp,
+                "time_str": t,
+                "objects": objects_str,
+                "summary": summary,
+            }],
+        )
+
+    def search_memories(self, query, n_results=10):
+        """Semantic search over memories using ChromaDB."""
+        results = self._collection.query(
+            query_texts=[query],
+            n_results=n_results,
+        )
+        memories = []
+        if results and results["metadatas"]:
+            for meta, doc in zip(results["metadatas"][0], results["documents"][0]):
+                memories.append({
+                    "timestamp": meta["timestamp"],
+                    "time_str": meta["time_str"],
+                    "summary": meta["summary"],
+                    "objects": meta.get("objects", ""),
+                    "document": doc,
+                })
+        return memories
 
     def get_recent_memories(self, hours=None):
-        """Retrieve recent memories."""
+        """Retrieve recent memories from SQLite."""
         if hours is None:
             hours = MEMORY_RETENTION_HOURS
         cutoff = time.time() - (hours * 3600)
@@ -107,10 +157,20 @@ class MemoryLogger:
         return [dict(row) for row in rows]
 
     def prune_old_memories(self):
-        """Remove memories older than retention period."""
+        """Remove memories older than retention period from both stores."""
         cutoff = time.time() - (MEMORY_RETENTION_HOURS * 3600)
         with self._lock:
             conn = sqlite3.connect(DB_PATH)
+            # Get IDs to prune from Chroma too
+            rows = conn.execute(
+                "SELECT id FROM memories WHERE timestamp < ?", (cutoff,)
+            ).fetchall()
+            if rows:
+                ids_to_delete = [str(r[0]) for r in rows]
+                try:
+                    self._collection.delete(ids=ids_to_delete)
+                except Exception:
+                    pass
             conn.execute("DELETE FROM memories WHERE timestamp < ?", (cutoff,))
             conn.commit()
             conn.close()
