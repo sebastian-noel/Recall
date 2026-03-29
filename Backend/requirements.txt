@@ -1,8 +1,9 @@
 opencv-python
+requests
 ultralytics
+chromadb
 google-genai
 elevenlabs
-chromadb
 flask
 flask-cors
 numpy

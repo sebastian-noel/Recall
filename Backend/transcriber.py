@@ -12,6 +12,23 @@ class Transcriber:
         self.client = ElevenLabs(api_key=ELEVENLABS_API_KEY)
         self.transcripts = deque(maxlen=100)
 
+    def transcribe_bytes(self, audio_bytes: bytes, filename: str = "audio.webm") -> str:
+        """Transcribe raw audio bytes (WebM, WAV, etc.) directly from browser."""
+        try:
+            result = self.client.speech_to_text.convert(
+                file=(filename, audio_bytes),
+                model_id="scribe_v2",
+                tag_audio_events=False,
+            )
+            text = result.text.strip()
+            if text:
+                self.transcripts.append({"text": text, "timestamp": time.time()})
+                print(f"[Transcriber] voice: '{text[:80]}'")
+            return text
+        except Exception as e:
+            print(f"[Transcriber] Error: {e}")
+            return ""
+
     def transcribe(self, audio_chunk: np.ndarray):
         """Transcribe an audio chunk (int16 numpy array) using ElevenLabs Scribe v2."""
         try:
