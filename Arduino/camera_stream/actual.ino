@@ -15,8 +15,8 @@
 // ========================
 // WiFi Config — UPDATE THESE
 // ========================
-const char* ssid     = "Stev";
-const char* password = "Sismyname";
+const char* ssid     = "NETWORKNAME";
+const char* password = "PASSWORD";
 
 // ========================
 // Camera Pins (AI Thinker)

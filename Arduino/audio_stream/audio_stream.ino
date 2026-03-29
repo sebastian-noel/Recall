@@ -2,8 +2,8 @@
 #include <driver/i2s.h>
 
 // ==================== CONFIG ====================
-const char* ssid       = "YOUR_WIFI_SSID";
-const char* password   = "YOUR_WIFI_PASSWORD";
+const char* ssid       = "NETWORKNAME";
+const char* password   = "PASSWORD";
 const char* serverIP   = "YOUR_LAPTOP_IP";  // e.g., "172.20.10.2"
 const uint16_t serverPort = 5001;
 

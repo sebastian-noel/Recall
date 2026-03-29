@@ -15,8 +15,8 @@
 // ========================
 // WiFi Config — UPDATE THESE
 // ========================
-const char* ssid     = "YOUR_WIFI_SSID";
-const char* password = "YOUR_WIFI_PASSWORD";
+const char* ssid     = "NETWORKNAME";
+const char* password = "PASSWORD";
 
 // ========================
 // Camera Pins (Freenove ESP32-S3 WROOM CAM)
