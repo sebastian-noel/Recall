@@ -1,16 +1,16 @@
 import time
-import google.generativeai as genai
+from google import genai
 from config import GEMINI_API_KEY
 from memory_logger import MemoryLogger
 
-genai.configure(api_key=GEMINI_API_KEY)
+client = genai.Client(api_key=GEMINI_API_KEY)
+MODEL = "gemini-2.5-flash"
 
 
 class QueryAgent:
     def __init__(self, memory_logger: MemoryLogger, voice_output=None):
         self.memory_logger = memory_logger
         self.voice_output = voice_output
-        self.model = genai.GenerativeModel("gemini-1.5-flash")
 
     def answer(self, question: str) -> str:
         """Answer a user's question using the memory log."""
@@ -24,7 +24,7 @@ class QueryAgent:
         prompt = self._build_prompt(question, memories)
 
         try:
-            response = self.model.generate_content(prompt)
+            response = client.models.generate_content(model=MODEL, contents=prompt)
             answer = response.text.strip()
             print(f"[QueryAgent] Q: {question} → A: {answer[:80]}...")
             self._speak(answer)

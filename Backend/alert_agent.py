@@ -1,10 +1,11 @@
 import time
 import threading
-import google.generativeai as genai
+from google import genai
 from config import GEMINI_API_KEY
 from memory_logger import MemoryLogger
 
-genai.configure(api_key=GEMINI_API_KEY)
+client = genai.Client(api_key=GEMINI_API_KEY)
+MODEL = "gemini-2.5-flash"
 
 ALERT_INTERVAL = 120      # Check every 2 minutes
 ALERT_COOLDOWN = 300       # 5 minutes between alerts
@@ -14,7 +15,6 @@ class AlertAgent:
     def __init__(self, memory_logger: MemoryLogger, voice_output=None):
         self.memory_logger = memory_logger
         self.voice_output = voice_output
-        self.model = genai.GenerativeModel("gemini-1.5-flash")
         self.running = False
         self._thread = None
         self._last_alert_time = 0
@@ -43,7 +43,7 @@ class AlertAgent:
         prompt = self._build_prompt(memories)
 
         try:
-            response = self.model.generate_content(prompt)
+            response = client.models.generate_content(model=MODEL, contents=prompt)
             text = response.text.strip()
 
             if text.upper().startswith("NONE"):

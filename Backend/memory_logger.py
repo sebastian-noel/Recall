@@ -1,18 +1,20 @@
 import cv2
+import io
 import time
 import sqlite3
 import threading
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 from PIL import Image
 import numpy as np
 from config import GEMINI_API_KEY, DB_PATH, MEMORY_RETENTION_HOURS
 
-genai.configure(api_key=GEMINI_API_KEY)
+client = genai.Client(api_key=GEMINI_API_KEY)
+MODEL = "gemini-2.5-flash"
 
 
 class MemoryLogger:
     def __init__(self):
-        self.model = genai.GenerativeModel("gemini-1.5-flash")
         self._lock = threading.Lock()
         self._init_db()
 
@@ -36,9 +38,9 @@ class MemoryLogger:
     def log_frame(self, frame, timestamp, tags, transcript=""):
         """Send frame to Gemini Vision for description, store in SQLite."""
         try:
-            # Convert OpenCV BGR to RGB PIL Image
-            rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            pil_image = Image.fromarray(rgb)
+            # Convert OpenCV BGR to JPEG bytes
+            _, jpeg_buf = cv2.imencode(".jpg", frame)
+            image_bytes = jpeg_buf.tobytes()
 
             prompt = (
                 "You are a memory assistant for someone with cognitive impairment. "
@@ -47,7 +49,13 @@ class MemoryLogger:
                 "Be specific about WHERE things are (e.g., 'keys on the kitchen counter next to the toaster')."
             )
 
-            response = self.model.generate_content([prompt, pil_image])
+            response = client.models.generate_content(
+                model=MODEL,
+                contents=[
+                    types.Part.from_bytes(data=image_bytes, mime_type="image/jpeg"),
+                    prompt,
+                ],
+            )
             summary = response.text.strip()
 
             time.sleep(0.5)  # Rate limiting

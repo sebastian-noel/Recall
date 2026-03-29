@@ -1,6 +1,7 @@
 import signal
 import sys
 import threading
+import time
 
 from config import API_PORT
 from video_capture import VideoCapture

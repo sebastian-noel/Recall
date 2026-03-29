@@ -1,14 +1,12 @@
 import time
-import google.generativeai as genai
+from google import genai
 from config import GEMINI_API_KEY
 
-genai.configure(api_key=GEMINI_API_KEY)
+client = genai.Client(api_key=GEMINI_API_KEY)
+MODEL = "gemini-2.5-flash"
 
 
 class GeminiSelector:
-    def __init__(self):
-        self.model = genai.GenerativeModel("gemini-1.5-flash")
-
     def select_frames(self, tagged_frames, transcript=""):
         """Select 2-3 most important frame indices from a batch of tagged frames.
 
@@ -22,7 +20,7 @@ class GeminiSelector:
         prompt = self._build_prompt(tagged_frames, transcript)
 
         try:
-            response = self.model.generate_content(prompt)
+            response = client.models.generate_content(model=MODEL, contents=prompt)
             indices = self._parse_response(response.text, len(tagged_frames))
             print(f"[GeminiSelector] Selected frames: {indices}")
             return indices

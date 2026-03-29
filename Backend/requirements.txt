@@ -1,6 +1,6 @@
 opencv-python
 ultralytics
-google-generativeai
+google-genai
 elevenlabs
 flask
 flask-cors
