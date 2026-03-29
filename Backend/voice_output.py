@@ -9,6 +9,9 @@ class VoiceOutput:
         self.client = ElevenLabs(api_key=ELEVENLABS_API_KEY)
         self._lock = threading.Lock()
 
+    def set_voice_id(self, voice_id: str):
+        self._voice_id = voice_id
+
     def speak(self, text: str):
         """Speak text via ElevenLabs TTS in a background thread."""
         threading.Thread(target=self._speak, args=(text,), daemon=True).start()
@@ -17,7 +20,7 @@ class VoiceOutput:
         with self._lock:
             try:
                 audio = self.client.text_to_speech.convert(
-                    voice_id=ELEVENLABS_VOICE_ID,
+                    voice_id=getattr(self, "_voice_id", ELEVENLABS_VOICE_ID),
                     text=text,
                     model_id="eleven_turbo_v2",
                 )

@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { emitMicActive } from "../lib/micBus";
+const AGENT_ID = "agent_3001kmw7p0qdes3a2xpg93edk389";
 
 interface Message {
   id: number;
@@ -20,15 +22,22 @@ export default function ChatWindow() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [micState, setMicState] = useState<"idle" | "recording" | "processing">("idle");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const nextId = useRef(0);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const sendMessage = async (text?: string) => {
+  useEffect(() => {
+    emitMicActive(micState === "recording");
+  }, [micState]);
+
+  const sendMessage = async (text?: string, isVoice = false) => {
     const question = (text ?? input).trim();
     if (!question || loading) return;
 
@@ -49,15 +58,28 @@ export default function ChatWindow() {
         body: JSON.stringify({ question }),
       });
       const data = await res.json();
+      const answer = data.answer || "No relevant memories found.";
       setMessages((prev) => [
         ...prev,
-        {
-          id: nextId.current++,
-          sender: "recall",
-          text: data.answer || "No relevant memories found.",
-          timestamp: new Date(),
-        },
+        { id: nextId.current++, sender: "recall", text: answer, timestamp: new Date() },
       ]);
+
+      if (isVoice) {
+        try {
+          const ttsRes = await fetch("/api/tts", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text: answer }),
+          });
+          if (ttsRes.ok) {
+            const blob = await ttsRes.blob();
+            const url = URL.createObjectURL(blob);
+            const audio = new Audio(url);
+            audio.play();
+            audio.onended = () => URL.revokeObjectURL(url);
+          }
+        } catch { /* ignore TTS errors */ }
+      }
     } catch {
       setMessages((prev) => [
         ...prev,
@@ -71,6 +93,47 @@ export default function ChatWindow() {
     } finally {
       setLoading(false);
       inputRef.current?.focus();
+    }
+  };
+
+  const toggleRecording = async () => {
+    if (micState === "recording") {
+      mediaRecorderRef.current?.stop();
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      audioChunksRef.current = [];
+
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+
+      recorder.onstop = async () => {
+        stream.getTracks().forEach((t) => t.stop());
+        setMicState("processing");
+
+        const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+        const form = new FormData();
+        form.append("audio", blob, "audio.webm");
+
+        try {
+          const res = await fetch("/api/transcribe", { method: "POST", body: form });
+          const data = await res.json();
+          if (data.text) await sendMessage(data.text, true);
+        } catch {
+          // silently ignore transcription errors
+        } finally {
+          setMicState("idle");
+        }
+      };
+
+      mediaRecorderRef.current = recorder;
+      recorder.start();
+      setMicState("recording");
+    } catch {
+      setMicState("idle");
     }
   };
 
@@ -183,6 +246,31 @@ export default function ChatWindow() {
             className="flex-1 bg-transparent text-sm text-slate-200 placeholder-slate-700 focus:outline-none font-mono"
             disabled={loading}
           />
+          <button
+            onClick={toggleRecording}
+            disabled={loading || micState === "processing"}
+            title={micState === "recording" ? "Stop recording" : "Speak your question"}
+            className={`relative flex items-center justify-center w-8 h-8 rounded-xl border transition-all flex-shrink-0 ${
+              micState === "recording"
+                ? "bg-red-500/20 border-red-500/50 text-red-400"
+                : "bg-white/5 border-white/10 text-slate-500 hover:text-recall-400 hover:border-recall-500/30"
+            } disabled:opacity-30 disabled:cursor-not-allowed`}
+          >
+            {micState === "recording" && (
+              <span className="absolute inset-0 rounded-xl bg-red-500/20 animate-ping" />
+            )}
+            {micState === "processing" ? (
+              <svg className="animate-spin" width="14" height="14" viewBox="0 0 14 14" fill="none">
+                <circle cx="7" cy="7" r="5" stroke="currentColor" strokeWidth="1.5" strokeDasharray="8 8" />
+              </svg>
+            ) : (
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                <rect x="4" y="1" width="6" height="8" rx="3" stroke="currentColor" strokeWidth="1.2" />
+                <path d="M2 7c0 2.761 2.239 5 5 5s5-2.239 5-5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+                <line x1="7" y1="12" x2="7" y2="13.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+              </svg>
+            )}
+          </button>
           <button
             onClick={() => sendMessage()}
             disabled={loading || !input.trim()}

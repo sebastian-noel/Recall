@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState, useEffect } from "react";
+import { onMicActive } from "../lib/micBus";
 
 interface Status {
   camera_connected: boolean;
@@ -32,6 +33,18 @@ function Indicator({ active, label }: { active: boolean; label: string }) {
 
 export default function StatusBar() {
   const [status, setStatus] = useState<Status | null>(null);
+  const [timeStr, setTimeStr] = useState<string | null>(null);
+  const [browserMicActive, setBrowserMicActive] = useState(false);
+
+  useEffect(() => onMicActive(setBrowserMicActive), []);
+
+  useEffect(() => {
+    const updateTime = () =>
+      setTimeStr(new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false }));
+    updateTime();
+    const tid = setInterval(updateTime, 1000);
+    return () => clearInterval(tid);
+  }, []);
 
   useEffect(() => {
     const fetch_ = async () => {
@@ -46,9 +59,6 @@ export default function StatusBar() {
     const id = setInterval(fetch_, 5000);
     return () => clearInterval(id);
   }, []);
-
-  const now = new Date();
-  const timeStr = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false });
 
   return (
     <div className="relative flex items-center gap-6 px-6 py-2.5 border-b border-white/[0.06] bg-navy-950/80 backdrop-blur-md z-10">
@@ -68,7 +78,7 @@ export default function StatusBar() {
       {status ? (
         <>
           <Indicator active={status.camera_connected} label="Camera" />
-          <Indicator active={status.mic_connected} label="Mic" />
+          <Indicator active={status.mic_connected || browserMicActive} label="Mic" />
           <Indicator active={status.pipeline_active} label="Pipeline" />
         </>
       ) : (
@@ -82,7 +92,7 @@ export default function StatusBar() {
             <span className="text-recall-500">{status.memory_count}</span> memories
           </span>
         )}
-        <span className="text-xs font-mono text-slate-600 tabular-nums">{timeStr}</span>
+        {timeStr && <span className="text-xs font-mono text-slate-600 tabular-nums">{timeStr}</span>}
       </div>
     </div>
   );

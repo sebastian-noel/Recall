@@ -101,17 +101,13 @@ class MemoryLogger:
         return memory_id
 
     def _insert_chroma(self, memory_id, timestamp, summary, tags, transcript):
-        """Store memory embedding in ChromaDB for semantic search."""
         objects_str = ", ".join(tags) if tags else ""
-        # Combine summary + objects + transcript for richer embeddings
         document = summary
         if objects_str:
             document += f" Objects: {objects_str}."
         if transcript:
             document += f" Speech: {transcript}"
-
         t = time.strftime("%I:%M %p", time.localtime(timestamp))
-
         self._collection.add(
             ids=[str(memory_id)],
             documents=[document],
@@ -124,11 +120,7 @@ class MemoryLogger:
         )
 
     def search_memories(self, query, n_results=10):
-        """Semantic search over memories using ChromaDB."""
-        results = self._collection.query(
-            query_texts=[query],
-            n_results=n_results,
-        )
+        results = self._collection.query(query_texts=[query], n_results=n_results)
         memories = []
         if results and results["metadatas"]:
             for meta, doc in zip(results["metadatas"][0], results["documents"][0]):
@@ -140,6 +132,14 @@ class MemoryLogger:
                     "document": doc,
                 })
         return memories
+
+    def log_voice_input(self, text: str):
+        """Save a voice conversation turn directly as a memory entry."""
+        summary = f"Voice input: {text}"
+        ts = time.time()
+        memory_id = self._insert_memory(ts, summary, [], text)
+        self._insert_chroma(memory_id, ts, summary, [], text)
+        print(f"[MemoryLogger] Voice saved: {text[:80]}")
 
     def get_recent_memories(self, hours=None):
         """Retrieve recent memories from SQLite."""
@@ -161,7 +161,6 @@ class MemoryLogger:
         cutoff = time.time() - (MEMORY_RETENTION_HOURS * 3600)
         with self._lock:
             conn = sqlite3.connect(DB_PATH)
-            # Get IDs to prune from Chroma too
             rows = conn.execute(
                 "SELECT id FROM memories WHERE timestamp < ?", (cutoff,)
             ).fetchall()

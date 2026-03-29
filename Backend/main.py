@@ -2,8 +2,10 @@ import signal
 import sys
 import threading
 import time
+import json
+import urllib.request
 
-from config import API_PORT
+from config import API_PORT, ESP32_WROOM_TRANSCRIPT_URL
 from video_capture import VideoCapture
 from audio_capture import AudioCapture
 from transcriber import Transcriber
@@ -12,6 +14,15 @@ from memory_logger import MemoryLogger
 from query_agent import QueryAgent
 from voice_output import VoiceOutput
 import api_server
+
+
+def fetch_esp32_transcript() -> str:
+    """Fetch the latest transcript text from the ESP32 audio device."""
+    try:
+        with urllib.request.urlopen(ESP32_WROOM_TRANSCRIPT_URL, timeout=2) as resp:
+            return json.loads(resp.read().decode()).get("text", "")
+    except Exception:
+        return ""
 
 
 def select_best_frames(tagged_frames, n=3):
@@ -31,11 +42,18 @@ def main():
     memory_logger = MemoryLogger()
     transcriber = Transcriber()
     yolo_tagger = YOLOTagger()
-    query_agent = QueryAgent(memory_logger, voice_output)
+    query_agent = QueryAgent(memory_logger, voice_output, transcriber)
+
+    _last_log_time = [0.0]
+    LOG_INTERVAL = 15  # seconds between memory logs
 
     # Pipeline callback: video batch → YOLO tag → select top frames → memory log
     def on_video_batch(batch):
-        transcript = transcriber.get_recent_transcript(seconds=60)
+        now = time.time()
+        if now - _last_log_time[0] < LOG_INTERVAL:
+            return
+        _last_log_time[0] = now
+        transcript = fetch_esp32_transcript()
         tagged = yolo_tagger.tag_batch(batch)
         selected = select_best_frames(tagged, n=3)
         memory_logger.log_selected_frames(tagged, selected, transcript)
@@ -50,7 +68,7 @@ def main():
     audio_capture = AudioCapture(on_chunk_ready=on_audio_chunk)
 
     # Wire up the API server
-    api_server.init_app(query_agent, memory_logger, video_capture, audio_capture)
+    api_server.init_app(query_agent, memory_logger, video_capture, audio_capture, transcriber, voice_output)
 
     # Start all components
     print("[Main] Starting video capture...")

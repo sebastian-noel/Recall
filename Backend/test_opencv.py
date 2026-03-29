@@ -1,6 +1,7 @@
 import cv2
+from config import ESP32_S3_STREAM_URL
 
-ESP32_STREAM_URL = "http://172.20.10.3/stream"  # update if IP changes
+ESP32_STREAM_URL = ESP32_S3_STREAM_URL
 
 
 def test_esp32():

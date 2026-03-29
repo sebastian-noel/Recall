@@ -25,6 +25,27 @@ const links = [
       </svg>
     ),
   },
+  {
+    href: "/voice",
+    label: "My Voice",
+    icon: (
+      <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+        <rect x="4.5" y="1" width="4" height="6" rx="2" stroke="currentColor" strokeWidth="1.1" />
+        <path d="M2 7c0 2.209 1.791 4 4 4h1c2.209 0 4-1.791 4-4" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" />
+        <line x1="6.5" y1="11" x2="6.5" y2="12.5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" />
+      </svg>
+    ),
+  },
+  {
+    href: "/live",
+    label: "Live",
+    icon: (
+      <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+        <circle cx="6.5" cy="6.5" r="2.5" fill="currentColor" fillOpacity="0.6" />
+        <circle cx="6.5" cy="6.5" r="5.5" stroke="currentColor" strokeWidth="1.1" strokeDasharray="2 2" />
+      </svg>
+    ),
+  },
 ];
 
 export default function Nav() {

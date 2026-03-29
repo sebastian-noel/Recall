@@ -6,20 +6,22 @@ import time
 import urllib.request
 import numpy as np
 from ultralytics import YOLO
+from config import (
+    ESP32_S3_IP, ESP32_S3_FRAME_URL, ESP32_WROOM_TRANSCRIPT_URL,
+    YOLO_MODEL, YOLO_CONFIDENCE,
+)
 
-ESP32_FRAME_URL    = "http://172.20.10.7/frame"
-TRANSCRIPT_URL     = "http://172.20.10.12/transcript"
-LOG_FILE           = "recall_log.json"
-YOLO_MODEL         = "yolov8n.pt"
-CONFIDENCE         = 0.4
-FRAME_INTERVAL     = 1   # seconds between frame grabs
-TRANSCRIPT_INTERVAL = 30  # seconds between transcript windows
+TRANSCRIPT_URL      = ESP32_WROOM_TRANSCRIPT_URL
+LOG_FILE            = "recall_log.json"
+CONFIDENCE          = YOLO_CONFIDENCE
+FRAME_INTERVAL      = 1   # seconds between frame grabs
+TRANSCRIPT_INTERVAL = 60  # seconds between transcript windows
 TRANSCRIPT_WAIT_MAX = 10  # max seconds to wait for new transcript
 
 
 def esp32_reachable():
     try:
-        s = socket.create_connection(("172.20.10.7", 80), timeout=1)
+        s = socket.create_connection((ESP32_S3_IP, 80), timeout=1)
         s.close()
         return True
     except OSError:
@@ -28,7 +30,7 @@ def esp32_reachable():
 
 def fetch_frame():
     try:
-        with urllib.request.urlopen(ESP32_FRAME_URL, timeout=3) as resp:
+        with urllib.request.urlopen(ESP32_S3_FRAME_URL, timeout=3) as resp:
             jpg_bytes = resp.read()
         arr = np.frombuffer(jpg_bytes, dtype=np.uint8)
         return cv2.imdecode(arr, cv2.IMREAD_COLOR)
@@ -58,21 +60,18 @@ def run_yolo(model, frame):
     return [f"{count} {name}" for name, count in sorted(counts.items())]
 
 
-def wait_for_new_transcript(last_text):
-    """
-    Poll transcript endpoint until text changes or TRANSCRIPT_WAIT_MAX is exceeded.
-    Returns the new transcript dict (or latest seen if timed out).
-    """
-    deadline = time.time() + TRANSCRIPT_WAIT_MAX
-    data = None
-    while time.time() < deadline:
-        data = fetch_transcript()
-        if data and data.get("text") and data["text"] != last_text:
-            print(f"[Transcript] New transcript received")
-            return data
-        time.sleep(1)
-    print(f"[Transcript] Timed out waiting — using latest available")
-    return data if data else {"text": last_text, "timestamp": None}
+def wait_for_new_transcript(last_index):
+      """Poll until index increments or TRANSCRIPT_WAIT_MAX exceeded."""
+      deadline = time.time() + TRANSCRIPT_WAIT_MAX                                                                                                                                                         
+      data = None                                                                                                                                                                                          
+      while time.time() < deadline:                                                                                                                                                                        
+          data = fetch_transcript()                                                                                                                                                                        
+          if data and data.get("index", -1) > last_index:
+              print(f"[Transcript] New transcript received (index {data['index']})")                                                                                                                       
+              return data                                                                                                                                                                                  
+          time.sleep(1)  
+      print(f"[Transcript] Timed out waiting — using latest available")                                                                                                                                    
+      return data if data else {"text": "", "index": last_index, "timestamp": None}
 
 
 def write_log(timestamp_str, transcript_text, frame_results):
@@ -99,7 +98,7 @@ if __name__ == "__main__":
     cv2.namedWindow("Recall — Live Frame", cv2.WINDOW_NORMAL)
 
     frame_results = []
-    last_transcript = ""
+    last_index = -1
     window_start = time.time()
 
     while True:
@@ -125,10 +124,10 @@ if __name__ == "__main__":
             print(f"[Sync] {TRANSCRIPT_INTERVAL}s window done — waiting for transcript...")
             timestamp_str = time.strftime("%I:%M:%S %p")
 
-            result = wait_for_new_transcript(last_transcript)
-            transcript_text = result.get("text", "") if result else ""
+            result = wait_for_new_transcript(last_index)                                                                                                                                                             
+            transcript_text = result.get("text", "") if result else ""                                                                                                                                               
+            last_index = result.get("index", last_index) if result else last_index 
             print(f"[Transcript] Full text: '{transcript_text}'")
-            last_transcript = transcript_text
 
             write_log(timestamp_str, transcript_text, list(frame_results))
 
