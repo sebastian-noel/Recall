@@ -1,7 +1,101 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500&family=Inter:wght@300;400;500;600&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-body {
-  font-family: system-ui, -apple-system, sans-serif;
+/* ── Base ──────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  background: #080c14;
+  color: #e2e8f0;
+  font-family: 'Inter', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Custom scrollbar ──────────────────────────────────────── */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 196, 240, 0.25);
+  border-radius: 2px;
+}
+::-webkit-scrollbar-thumb:hover { background: rgba(0, 196, 240, 0.5); }
+
+/* ── Glass panel ───────────────────────────────────────────── */
+.glass {
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+/* ── Cyan glow effects ─────────────────────────────────────── */
+.glow-cyan {
+  box-shadow: 0 0 20px rgba(0, 196, 240, 0.15), 0 0 40px rgba(0, 196, 240, 0.05);
+}
+.glow-cyan-sm {
+  box-shadow: 0 0 8px rgba(0, 196, 240, 0.3);
+}
+.text-glow {
+  text-shadow: 0 0 20px rgba(0, 196, 240, 0.5);
+}
+
+/* ── Pulsing dot ───────────────────────────────────────────── */
+@keyframes pulse-ring {
+  0%   { transform: scale(0.8); opacity: 1; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+.pulse-ring::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 50%;
+  border: 1px solid currentColor;
+  animation: pulse-ring 1.5s ease-out infinite;
+}
+
+/* ── Scanline overlay ──────────────────────────────────────── */
+.scanlines::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.03) 2px,
+    rgba(0, 0, 0, 0.03) 4px
+  );
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* ── Typing dots ───────────────────────────────────────────── */
+@keyframes typingBounce {
+  0%, 60%, 100% { transform: translateY(0); }
+  30%           { transform: translateY(-6px); }
+}
+.typing-dot:nth-child(1) { animation: typingBounce 1.2s infinite 0s; }
+.typing-dot:nth-child(2) { animation: typingBounce 1.2s infinite 0.2s; }
+.typing-dot:nth-child(3) { animation: typingBounce 1.2s infinite 0.4s; }
+
+/* ── Fade-in animation ─────────────────────────────────────── */
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.fade-in { animation: fadeSlideIn 0.25s ease-out; }
+
+/* ── Timeline connector line ───────────────────────────────── */
+.timeline-line {
+  position: absolute;
+  left: 50%;
+  top: 100%;
+  transform: translateX(-50%);
+  width: 1px;
+  height: 100%;
+  background: linear-gradient(to bottom, rgba(0,196,240,0.3), transparent);
 }
