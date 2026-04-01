@@ -4,7 +4,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ── Base ──────────────────────────────────────────────────── */
+/* Base */
 *, *::before, *::after { box-sizing: border-box; }
 
 html, body {
@@ -15,7 +15,7 @@ html, body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* ── Custom scrollbar ──────────────────────────────────────── */
+/* Custom scrollbar */
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
@@ -24,7 +24,7 @@ html, body {
 }
 ::-webkit-scrollbar-thumb:hover { background: rgba(0, 196, 240, 0.5); }
 
-/* ── Glass panel ───────────────────────────────────────────── */
+/* Glass panel */
 .glass {
   background: rgba(255, 255, 255, 0.04);
   backdrop-filter: blur(12px);
@@ -32,7 +32,7 @@ html, body {
   border: 1px solid rgba(255, 255, 255, 0.07);
 }
 
-/* ── Cyan glow effects ─────────────────────────────────────── */
+/* Cyan glow effects */
 .glow-cyan {
   box-shadow: 0 0 20px rgba(0, 196, 240, 0.15), 0 0 40px rgba(0, 196, 240, 0.05);
 }
@@ -43,7 +43,7 @@ html, body {
   text-shadow: 0 0 20px rgba(0, 196, 240, 0.5);
 }
 
-/* ── Pulsing dot ───────────────────────────────────────────── */
+/* Pulsing dot */
 @keyframes pulse-ring {
   0%   { transform: scale(0.8); opacity: 1; }
   100% { transform: scale(2.2); opacity: 0; }
@@ -57,7 +57,7 @@ html, body {
   animation: pulse-ring 1.5s ease-out infinite;
 }
 
-/* ── Scanline overlay ──────────────────────────────────────── */
+/* Scanline overlay */
 .scanlines::after {
   content: '';
   position: absolute;
@@ -73,7 +73,7 @@ html, body {
   z-index: 1;
 }
 
-/* ── Typing dots ───────────────────────────────────────────── */
+/* Typing dots */
 @keyframes typingBounce {
   0%, 60%, 100% { transform: translateY(0); }
   30%           { transform: translateY(-6px); }
@@ -82,14 +82,14 @@ html, body {
 .typing-dot:nth-child(2) { animation: typingBounce 1.2s infinite 0.2s; }
 .typing-dot:nth-child(3) { animation: typingBounce 1.2s infinite 0.4s; }
 
-/* ── Fade-in animation ─────────────────────────────────────── */
+/* Fade-in animation */
 @keyframes fadeSlideIn {
   from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 .fade-in { animation: fadeSlideIn 0.25s ease-out; }
 
-/* ── Timeline connector line ───────────────────────────────── */
+/* Timeline connector line */
 .timeline-line {
   position: absolute;
   left: 50%;

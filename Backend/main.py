@@ -47,7 +47,7 @@ def main():
     _last_log_time = [0.0]
     LOG_INTERVAL = 15  # seconds between memory logs
 
-    # Pipeline callback: video batch → YOLO tag → select top frames → memory log
+    # Pipeline callback: video batch -> YOLO tag -> select top frames -> memory log
     def on_video_batch(batch):
         now = time.time()
         if now - _last_log_time[0] < LOG_INTERVAL:
@@ -59,7 +59,7 @@ def main():
         memory_logger.log_selected_frames(tagged, selected, transcript)
         memory_logger.prune_old_memories()
 
-    # Pipeline callback: audio chunk → transcribe
+    # Pipeline callback: audio chunk -> transcribe
     def on_audio_chunk(audio_chunk):
         transcriber.transcribe(audio_chunk)
 

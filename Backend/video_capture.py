@@ -16,7 +16,7 @@ class VideoCapture:
         self.running = False
         self._thread = None
         self._frame_count = 0
-        self._source = None  # "esp32" or "webcam"
+        self._source = None  # "esp32"
 
     def start(self):
         self.running = True

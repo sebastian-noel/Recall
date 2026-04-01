@@ -8,7 +8,7 @@ client = genai.Client(api_key=GEMINI_API_KEY)
 MODEL = "gemini-2.5-flash"
 
 ALERT_INTERVAL = 120      # Check every 2 minutes
-ALERT_COOLDOWN = 300       # 5 minutes between alerts
+ALERT_COOLDOWN = 300      # 5 minutes between alerts
 
 
 class AlertAgent:

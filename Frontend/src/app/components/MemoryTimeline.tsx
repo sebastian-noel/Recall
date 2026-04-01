@@ -25,7 +25,7 @@ const MOOD_LABELS: Record<string, string> = {
   "😰": "Anxious",
 };
 
-// ── Mood picker ───────────────────────────────────────────────────────────────
+// Mood picker
 
 function MoodPicker({
   memoryId,
@@ -82,7 +82,7 @@ function MoodPicker({
   );
 }
 
-// ── Memory card ───────────────────────────────────────────────────────────────
+// Memory card
 
 function MemoryCard({
   memory,
@@ -149,7 +149,7 @@ function MemoryCard({
   );
 }
 
-// ── Main component ────────────────────────────────────────────────────────────
+// Main component
 
 export default function MemoryTimeline() {
   const [memories, setMemories] = useState<Memory[]>([]);

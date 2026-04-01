@@ -1,17 +1,12 @@
-// ============================================================
-//  CONFIG — edit before flashing
-// ============================================================
-#define WIFI_SSID           "NEWORKNAME"
+// ESP32-WROOM Audio Transcriber
+#define WIFI_SSID           "NETWORK_NAME"
 #define WIFI_PASSWORD       "PASSWORD"
 #define ELEVENLABS_API_KEY  "sk_SECRET"
 #define RECORD_SECONDS      30
-// ============================================================
-//  INMP441 I2S pins — verify against your wiring
-// ============================================================
+
 #define I2S_SCK_PIN   14   // BCLK
 #define I2S_WS_PIN    15   // LRCLK / WS
 #define I2S_SD_PIN    32   // Data
-// ============================================================
 
 #include <driver/i2s.h>
 #include <WiFi.h>
@@ -32,7 +27,7 @@ String    lastTranscript    = "Waiting for first recording...";
 uint32_t  transcriptIndex   = 0;
 uint32_t  transcriptTimestamp = 0;
 
-// ── WiFi ─────────────────────────────────────────────────────
+// WiFi
 void connectWiFi() {
   if (WiFi.status() == WL_CONNECTED) return;
   WiFi.disconnect(true);
@@ -54,7 +49,7 @@ void connectWiFi() {
                 WiFi.localIP().toString().c_str());
 }
 
-// ── I2S (legacy driver — works with INMP441 standard I2S) ────
+// I2S (legacy driver — works with INMP441 standard I2S)
 void initI2S() {
   i2s_config_t cfg = {
     .mode                 = (i2s_mode_t)(I2S_MODE_MASTER | I2S_MODE_RX),
@@ -81,7 +76,7 @@ void initI2S() {
   Serial.println("[I2S] Ready");
 }
 
-// ── WAV header ───────────────────────────────────────────────
+// WAV header
 void writeWavHeader(File& f, uint32_t pcm_bytes) {
   uint32_t file_size = pcm_bytes + WAV_HEADER_SIZE - 8;
   uint32_t byte_rate = SAMPLE_RATE * 2;  // mono 16-bit
@@ -104,7 +99,7 @@ void writeWavHeader(File& f, uint32_t pcm_bytes) {
   f.write(h, WAV_HEADER_SIZE);
 }
 
-// ── Record 15 s to SPIFFS ────────────────────────────────────
+//m Record 15 s to SPIFFS
 void recordToSPIFFS() {
   File f = SPIFFS.open(WAV_PATH, FILE_WRITE);
   if (!f) { Serial.println("[REC] SPIFFS open failed"); return; }
@@ -145,7 +140,7 @@ void recordToSPIFFS() {
                 max_sample < 10 ? "⚠ SILENT — check wiring!" : "OK");
 }
 
-// ── Stream WAV to ElevenLabs, return transcript ──────────────
+// Stream WAV to ElevenLabs, return transcript
 // Uses WiFiClientSecure directly so the WAV is streamed in chunks —
 // the full file never needs to sit in RAM.
 String transcribeWithElevenLabs() {
@@ -166,7 +161,7 @@ String transcribeWithElevenLabs() {
   size_t body_len = part1.length() + wav_size + part2.length();
 
   WiFiClientSecure client;
-  client.setInsecure();   // skip cert verification — OK for hackathon
+  client.setInsecure();
   client.setTimeout(30);
 
   Serial.println("[STT] Connecting to api.elevenlabs.io...");
@@ -187,7 +182,7 @@ String transcribeWithElevenLabs() {
     ELEVENLABS_API_KEY, boundary.c_str(), (int)body_len
   );
 
-  // Stream multipart body — no large malloc needed
+  // Stream multipart body
   client.print(part1);
   uint8_t buf[512];
   size_t sent = 0;
@@ -233,7 +228,7 @@ String transcribeWithElevenLabs() {
   return doc["text"].as<String>();
 }
 
-// ── HTTP endpoint: GET /transcript ───────────────────────────
+// HTTP endpoint: GET /transcript
 void handleTranscript() {
   StaticJsonDocument<1024> doc;
   doc["text"]      = lastTranscript;
@@ -243,8 +238,6 @@ void handleTranscript() {
   serializeJson(doc, out);
   httpServer.send(200, "application/json", out);
 }
-
-// ─────────────────────────────────────────────────────────────
 
 void setup() {
   Serial.begin(115200);
@@ -284,16 +277,16 @@ void loop() {
 
   httpServer.handleClient();
 
-  // ── 1. Record ────────────────────────────────────────────
+  // 1. Record
   recordToSPIFFS();
 
-  // ── 2. Transcribe ────────────────────────────────────────
+  // 2. Transcribe
   Serial.println("[STT] Sending to ElevenLabs Scribe...");
   uint32_t t0 = millis();
   String transcript = transcribeWithElevenLabs();
   Serial.printf("[STT] Finished in %.1f s\n", (millis() - t0) / 1000.0f);
 
-  // ── 3. Update served JSON ─────────────────────────────────
+  // 3. Update served JSON
   if (transcript.length() > 0) {
     lastTranscript     = transcript;
     transcriptIndex++;

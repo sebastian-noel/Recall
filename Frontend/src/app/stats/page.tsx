@@ -12,7 +12,7 @@ interface Memory {
   objects: string | null;
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// Helpers
 
 function buildHourlyData(memories: Memory[]) {
   const counts = Array.from({ length: 24 }, (_, h) => ({ hour: h, count: 0 }));
@@ -60,7 +60,7 @@ function fmtHour(h: number) {
   return h < 12 ? `${h}a` : `${h - 12}p`;
 }
 
-// ── Types ─────────────────────────────────────────────────────────────────────
+// Types
 
 interface MoodEntry {
   memory_id: number;
@@ -68,7 +68,7 @@ interface MoodEntry {
   timestamp: number;
 }
 
-// ── Stat card ─────────────────────────────────────────────────────────────────
+// Stat card
 
 function StatCard({ label, value, sub }: { label: string; value: string | number; sub?: string }) {
   return (
@@ -80,7 +80,7 @@ function StatCard({ label, value, sub }: { label: string; value: string | number
   );
 }
 
-// ── Custom tooltip ────────────────────────────────────────────────────────────
+// Custom tooltip
 
 function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: { value: number }[]; label?: string }) {
   if (!active || !payload?.length) return null;
@@ -101,7 +101,7 @@ function ObjectTooltip({ active, payload }: { active?: boolean; payload?: { valu
   );
 }
 
-// ── Mood bar (manual, no recharts needed) ─────────────────────────────────────
+// Mood bar (manual, no recharts needed)
 
 function MoodBar({ mood, count, max }: { mood: string; count: number; max: number }) {
   const pct = max === 0 ? 0 : (count / max) * 100;
@@ -119,7 +119,7 @@ function MoodBar({ mood, count, max }: { mood: string; count: number; max: numbe
   );
 }
 
-// ── Main page ─────────────────────────────────────────────────────────────────
+// Main page
 
 export default function StatsPage() {
   const [memories, setMemories] = useState<Memory[]>([]);
