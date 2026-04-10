@@ -4,14 +4,14 @@
 
 ## Team: Stevin George, Sebastian Noel, Nicole Bustos, Chris Ho
 
-![Recall Glasses](Assets/glasses.png)
+![Recall Glasses](Assets/recall-glasses.jpg)
 
 ### Summary
 Recall is a wearable AI memory assistant integrated into glasses, designed to support individuals with cognitive impairment or memory loss. It restores autonomy by acting as a passive, "always-on" observer that remembers daily details on the user’s behalf.
 
 - Passive Capture: Continuously records visual and audio data.
 
-- Natural Language Queries: Users can ask questions like "Where did I leave my keys?" and receive timestamped audio answers.
+- Natural Language Queries: Users can ask questions like "Where did I leave my keys?" or "Did I take my medicine today?" and receive timestamped audio answers.
 
 - Semantic Search: Uses AI to understand the meaning of scenes, allowing for intuitive memory retrieval.
 
@@ -33,16 +33,7 @@ Built using two ESP32 microcontrollers mounted directly onto glasses frames:
 - Audio & Voice: Transcribes environmental audio via ElevenLabs Scribe and delivers verbal responses using ElevenLabs TTS.
 
 - Dashboard: A Next.js web interface featuring a live memory timeline, mood analytics, and hardware health monitoring.
----
-**Dashboard**
 
-![Dashboard](Assets/dashboard.png)
-
-**Database**
-
-![Database](Assets/database.png)
-
----
 ### Tech Stack
 
 - AI/LLMs: Google Gemini 2.5 Flash, ElevenLabs (Scribe v2 & TTS).
@@ -55,5 +46,17 @@ Built using two ESP32 microcontrollers mounted directly onto glasses frames:
 
 - Backend: Python, Flask (Multi-threaded architecture).
 
-- Firmware: C++ (ESP32 / Arduino).
+- Firmware: C++ (ESP32).
+
+---
+
+**Dashboard**
+
+![Dashboard](Assets/dashboard.png)
+
+**Database**
+
+![Database](Assets/database.png)
+
+
 
